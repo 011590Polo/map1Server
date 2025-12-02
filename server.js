@@ -362,6 +362,9 @@ app.get('/api/coordenadas/rango', (req, res) => {
 const userSocketMap = new Map();
 // Mapa para rastrear si un usuario ya fue notificado como conectado en esta sesión
 const usuariosNotificados = new Map();
+// Mapa para almacenar las últimas ubicaciones de cada usuario conectado
+// Estructura: { userId: { lat, lng, speed, timestamp } }
+const ultimasUbicaciones = new Map();
 
 io.on('connection', (socket) => {
   console.log(`✅ Cliente conectado: ${socket.id}`);
@@ -451,6 +454,21 @@ io.on('connection', (socket) => {
         userId: id,
         usuario: getUsuarioById(id)
       });
+
+      // Enviar todas las ubicaciones de usuarios ya conectados al nuevo usuario
+      if (ultimasUbicaciones.size > 0) {
+        const ubicacionesExistentes = Array.from(ultimasUbicaciones.entries()).map(([userId, ubicacion]) => ({
+          userId,
+          lat: ubicacion.lat,
+          lng: ubicacion.lng,
+          speed: ubicacion.speed || 0,
+          timestamp: ubicacion.timestamp || Date.now()
+        }));
+
+        // Enviar todas las ubicaciones al nuevo usuario
+        socket.emit('ubicaciones-usuarios-conectados', ubicacionesExistentes);
+        console.log(`📍 Enviadas ${ubicacionesExistentes.length} ubicación(es) de usuarios conectados al nuevo usuario ${id}`);
+      }
     } catch (error) {
       console.error('❌ Error al registrar usuario:', error);
       socket.emit('usuario-registrado', {
@@ -539,6 +557,14 @@ io.on('connection', (socket) => {
         console.warn('Error al guardar coordenada en BD:', error);
       }
 
+      // Actualizar el mapa de últimas ubicaciones
+      ultimasUbicaciones.set(user_id, {
+        lat,
+        lng,
+        speed: speed || 0,
+        timestamp: timestamp || Date.now()
+      });
+
       // Reenviar ubicación a todos EXCEPTO al cliente emisor
       socket.broadcast.emit('ubicacion-usuario', {
         userId: user_id,
@@ -567,6 +593,8 @@ io.on('connection', (socket) => {
         userSocketMap.delete(userId);
         // Remover de usuarios notificados para permitir notificación en próxima conexión
         usuariosNotificados.delete(userId);
+        // Remover la ubicación del usuario desconectado
+        ultimasUbicaciones.delete(userId);
         
         // Usar la información del usuario guardada en el socket (no consultar BD)
         const userInfo = socket.userInfo || {};
