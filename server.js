@@ -529,7 +529,7 @@ io.on('connection', (socket) => {
   // ==================== UBICACIÓN EN TIEMPO REAL ====================
   socket.on('ubicacion-actual', (data) => {
     try {
-      const { userId, lat, lng, speed, timestamp } = data;
+      const { userId, lat, lng, speed, accuracy, timestamp } = data;
 
       if (!lat || !lng) {
         console.warn('⚠️  Ubicación inválida recibida');
@@ -550,7 +550,7 @@ io.on('connection', (socket) => {
           user_id,
           lat,
           lng,
-          accuracy: null,
+          accuracy: accuracy || null,
           timestamp: new Date().toISOString()
         });
       } catch (error) {
