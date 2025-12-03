@@ -1,7 +1,8 @@
 # Ejemplos de Uso del Servidor
 
 ## Ejemplos con cURL
-
+  
+  
 ### 1. Health Check
 ```bash
 curl http://localhost:3000/api/health
